@@ -1,0 +1,51 @@
+name: Deploy Quill AI to AWS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build Docker image
+      run: docker build -t quill-ai .
+
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+
+    - name: Push Docker image to ECR
+      run: |
+        docker tag quill-ai:latest ${{ secrets.ECR_REPOSITORY }}:latest
+        docker push ${{ secrets.ECR_REPOSITORY }}:latest
+
+    - name: Deploy to EKS
+      run: |
+        aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }}
+        kubectl apply -f aws/deployment.yaml
+
+    - name: Get Back the External IP of the LoadBalancer
+      run: |
+        echo "Waiting for the LoadBalancer to be provisioned"
+        kubectl wait --for=condition=available --timeout=600s deployment/quill-ai-service
+        EXTERNAL_IP=$(kubectl get svc quill-ai-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        echo "External IP: $EXTERNAL_IP"
+
+    - name: Notify Deployment Success
+      run: echo "Deployment Successful!"

@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+/quill
+
+.env
+
+pytest.ini
+.pytest_cache/
