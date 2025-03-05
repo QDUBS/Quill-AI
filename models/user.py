@@ -1,6 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
+from models import db
 
-db = SQLAlchemy()
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -8,4 +7,3 @@ class User(db.Model):
     password_hash = db.Column(db.String(120), nullable=False)
     generated_texts = db.relationship(
         'GeneratedText', backref='user', lazy=True)
- 

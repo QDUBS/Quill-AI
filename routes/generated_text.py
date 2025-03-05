@@ -1,45 +1,45 @@
 import os
+
 import openai
-from flask import Blueprint, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from dotenv import load_dotenv
-from models.generated_text import db, GeneratedText
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_sqlalchemy import SQLAlchemy
+
+from models.generated_text import GeneratedText, db
+from repositories.generated_text import GeneratedTextRepository
+from services.ai_provider import OpenAIProvider
+from validation.schemas import TextGenerationSchema
 
 load_dotenv()
 db = SQLAlchemy()
 text = Blueprint("api/", __name__)
+ai_provider = OpenAIProvider()
 
 openai.api_key = os.getenv('OPENAI_KEY')
 
 # Generate AI-generated response from OpenAI's API and store it in the database
-@jwt_required()
 @text.route("/generate-text", methods=["POST"])
+@jwt_required()
 def generate_text():
     data = request.get_json()
+
+    # Validate input
+    errors = TextGenerationSchema().validate(data)
+    if errors:
+        return jsonify(errors), 422
+
     prompt = data['prompt']
-    user_id = data['user_id']
+    user_id = get_jwt_identity()
 
     try:
-        # Call OpenAI API to generate text
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=prompt,
-            max_tokens=100
-        )
-
-        # Save generated text
-        generated_text = GeneratedText(
-            user_id=user_id,
-            prompt=prompt,
-            response=response.choices[0].text)
+        response = ai_provider.generate_text(prompt)
+        generated_text = GeneratedTextRepository.save_generated_text(
+            user_id, prompt, response)
     except Exception as e:
-        return jsonify({"message": f"OpenAI API error: {str(e)}"}), 500
+        return jsonify({"message": f"AI Error: {str(e)}"}), 500
 
-    db.session.add(generated_text)
-    db.session.commit()
-
-    return jsonify({"message": "Text generated and saved", "response": response.choices[0].text}), 201
+    return jsonify({"message": "Text generated", "response": response, "id": generated_text.id}), 201
 
 
 # Retrieve stored generated text to its owner (user that created it)

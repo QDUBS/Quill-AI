@@ -2,7 +2,7 @@ import pytest
 import openai
 from app import db
 from unittest.mock import patch
-from app.models.generated_text import GeneratedText
+from models.generated_text import GeneratedText
 
 
 @pytest.fixture
