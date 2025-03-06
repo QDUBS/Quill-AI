@@ -61,9 +61,9 @@ jobs:
           kubectl get nodes
           kubectl apply -f deployment.yaml
 
-      - name: Get Back the External IP of the LoadBalancer
+      - name: Get External IP of the LoadBalancer
         run: |
-          echo "Waiting for the LoadBalancer to be provisioned"
+          echo "Waiting for LoadBalancer to be provisioned"
           kubectl wait --for=condition=available --timeout=600s deployment/quill-ai-service
           EXTERNAL_IP=$(kubectl get svc quill-ai-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           echo "External IP: $EXTERNAL_IP"
