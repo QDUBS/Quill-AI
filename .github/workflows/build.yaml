@@ -53,61 +53,10 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-      - name: Create VPC for EKS Cluster
-        id: create-vpc
-        run: |
-          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --query 'Vpc.VpcId' --output text)
-          echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
-
-      - name: Create Subnets for EKS Cluster
-        id: create-subnets
-        run: |
-          SUBNET_PUBLIC_A=$(aws ec2 create-subnet --vpc-id ${{ env.VPC_ID }} --cidr-block 10.0.1.0/24 --availability-zone ${AWS_REGION}a --query 'Subnet.SubnetId' --output text)
-          SUBNET_PUBLIC_B=$(aws ec2 create-subnet --vpc-id ${{ env.VPC_ID }} --cidr-block 10.0.2.0/24 --availability-zone ${AWS_REGION}b --query 'Subnet.SubnetId' --output text)
-          echo "SUBNET_PUBLIC_A=$SUBNET_PUBLIC_A" >> $GITHUB_ENV
-          echo "SUBNET_PUBLIC_B=$SUBNET_PUBLIC_B" >> $GITHUB_ENV
-
-      - name: Create Security Group for EKS Cluster
-        id: create-security-group
-        run: |
-          SG_ID=$(aws ec2 create-security-group --group-name quill-ai-sg --description "Security group for EKS cluster" --vpc-id ${{ env.VPC_ID }} --query 'GroupId' --output text)
-          echo "SG_ID=$SG_ID" >> $GITHUB_ENV
-
-      - name: Create IAM policy for PassRole
-        id: create-passrole-policy
-        run: |
-          aws iam create-policy --policy-name EKSClusterPassRolePolicy \
-            --policy-document '{
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Action": [
-                    "iam:PassRole"
-                  ],
-                  "Resource": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/EKSClusterRole"
-                }
-              ]
-            }'
-          
-      - name: Attach IAM policy to user/role
-        id: attach-passrole-policy
-        run: |
-          aws iam attach-user-policy --policy-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:policy/EKSClusterPassRolePolicy --user-name ${{ secrets.AWS_USER_NAME }}
-          
-      - name: Create IAM role for EKS Cluster
-        run: |
-          aws iam create-role --role-name EKSClusterRole --assume-role-policy-document file://eks-role-trust-policy.json
-          aws iam attach-role-policy --role-name EKSClusterRole --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
-          aws iam attach-role-policy --role-name EKSClusterRole --policy-arn arn:aws:iam::aws:policy/AmazonEKSServicePolicy
- 
       - name: Create EKS Cluster
         run: |
-          aws eks create-cluster \
-            --name quill-ai \
-            --role-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/EKSClusterRole \
-            --resources-vpc-config subnetIds=${{ env.SUBNET_PUBLIC_A }},${{ env.SUBNET_PUBLIC_B }},securityGroupIds=${{ env.SG_ID }}
-
+          aws eks create-cluster --name quill-ai 
+          
       - name: Update kube config
         run: aws eks update-kubeconfig --name quill-ai
 
