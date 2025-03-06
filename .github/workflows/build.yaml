@@ -62,15 +62,15 @@ jobs:
       - name: Create Subnets for EKS Cluster
         id: create-subnets
         run: |
-          SUBNET_PUBLIC_A=$(aws ec2 create-subnet --vpc-id ${{ env.VPC_ID }} --cidr-block 10.0.1.0/24 --availability-zone ${AWS_REGION}a --query 'Subnet.SubnetId' --output text)
-          SUBNET_PUBLIC_B=$(aws ec2 create-subnet --vpc-id ${{ env.VPC_ID }} --cidr-block 10.0.2.0/24 --availability-zone ${AWS_REGION}b --query 'Subnet.SubnetId' --output text)
+          SUBNET_PUBLIC_A=$(aws ec2 create-subnet --vpc-id ${{ secrets.VPC_ID }} --cidr-block 10.0.1.0/24 --availability-zone ${AWS_REGION}a --query 'Subnet.SubnetId' --output text)
+          SUBNET_PUBLIC_B=$(aws ec2 create-subnet --vpc-id ${{ secrets.VPC_ID }} --cidr-block 10.0.2.0/24 --availability-zone ${AWS_REGION}b --query 'Subnet.SubnetId' --output text)
           echo "SUBNET_PUBLIC_A=$SUBNET_PUBLIC_A" >> $GITHUB_ENV
           echo "SUBNET_PUBLIC_B=$SUBNET_PUBLIC_B" >> $GITHUB_ENV
 
       - name: Create Security Group for EKS Cluster
         id: create-security-group
         run: |
-          SG_ID=$(aws ec2 create-security-group --group-name quill-ai-sg --description "Security group for EKS cluster" --vpc-id ${{ env.VPC_ID }} --query 'GroupId' --output text)
+          SG_ID=$(aws ec2 create-security-group --group-name quill-ai-sg --description "Security group for EKS cluster" --vpc-id ${{ secrets.VPC_ID }} --query 'GroupId' --output text)
           echo "SG_ID=$SG_ID" >> $GITHUB_ENV
           
       - name: Create IAM role for EKS Cluster
@@ -83,8 +83,8 @@ jobs:
         run: |
           aws eks create-cluster \
             --name quill-ai \
-            --role-arn arn:aws:iam::<account-id>:role/EKSClusterRole \
-            --resources-vpc-config subnetIds=<subnet-ids>,securityGroupIds=<security-group-ids>
+            --role-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/EKSClusterRole \
+            --resources-vpc-config subnetIds=${{ secrets.SUBNET_PUBLIC_A }},${{ secrets.SUBNET_PUBLIC_B }},securityGroupIds=${{ secrets.SG_ID }}
 
       - name: Update kube config
         run: aws eks update-kubeconfig --name quill-ai
