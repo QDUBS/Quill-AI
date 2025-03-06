@@ -24,7 +24,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install PostgreSQL development libraries
-        run: sudo apt-get update && sudo apt-get install -y libpq-dev build-essential postgresql-server-dev-all
+        run: sudo apt-get update && sudo apt-get install -y libpq-dev build-essential 
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v2.0
