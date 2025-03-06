@@ -72,6 +72,29 @@ jobs:
         run: |
           SG_ID=$(aws ec2 create-security-group --group-name quill-ai-sg --description "Security group for EKS cluster" --vpc-id ${{ env.VPC_ID }} --query 'GroupId' --output text)
           echo "SG_ID=$SG_ID" >> $GITHUB_ENV
+
+      - name: Create IAM policy for PassRole
+        id: create-passrole-policy
+        run: |
+          aws iam create-policy --policy-name EKSClusterPassRolePolicy \
+            --policy-document '{
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "iam:PassRole"
+                  ],
+                  "Resource": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/EKSClusterRole"
+                }
+              ]
+            }'
+          
+      - name: Attach IAM policy to user/role
+        id: attach-passrole-policy
+        run: |
+          aws iam attach-user-policy --policy-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:policy/EKSClusterPassRolePolicy --user-name ${{ secrets.AWS_USER_NAME }}
+
           
       - name: Create IAM role for EKS Cluster
         run: |
