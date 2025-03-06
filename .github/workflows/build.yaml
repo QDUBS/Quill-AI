@@ -94,14 +94,13 @@ jobs:
         id: attach-passrole-policy
         run: |
           aws iam attach-user-policy --policy-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:policy/EKSClusterPassRolePolicy --user-name ${{ secrets.AWS_USER_NAME }}
-
           
       - name: Create IAM role for EKS Cluster
         run: |
           aws iam create-role --role-name EKSClusterRole --assume-role-policy-document file://eks-role-trust-policy.json
           aws iam attach-role-policy --role-name EKSClusterRole --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
           aws iam attach-role-policy --role-name EKSClusterRole --policy-arn arn:aws:iam::aws:policy/AmazonEKSServicePolicy
-
+ 
       - name: Create EKS Cluster
         run: |
           aws eks create-cluster \
