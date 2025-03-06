@@ -23,6 +23,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install PostgreSQL development libraries
+        run: sudo apt-get update && sudo apt-get install -y libpq-dev
+
       - name: Install kubectl
         uses: azure/setup-kubectl@v2.0
         with:
